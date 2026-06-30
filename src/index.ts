@@ -10,7 +10,8 @@ import {
   Schemas,
   InputModifier,
   VirtualCamera,
-  MainCamera
+  MainCamera,
+  Name
 } from '@dcl/sdk/ecs'
 import { Quaternion, Vector3 } from '@dcl/sdk/math'
 import { getPlayerPosition } from '@dcl-sdk/utils'
@@ -224,11 +225,43 @@ let cinematicCam: Entity
 
 const GUMDROP_PROFILES: { srcPart: string; profile: GumdropProfile }[] = [
   {
+    srcPart: 'gumdrop-1',
+    profile: {
+      centerOffset: Vector3.create(-1.213, 3.434, -10.538),
+      topOffset: 4.437,
+      radius: 1.55
+    }
+  },
+  {
+    srcPart: 'gumdrop-2',
+    profile: {
+      centerOffset: Vector3.create(1.28, 11.675, -11.915),
+      topOffset: 12.652,
+      radius: 1.55
+    }
+  },
+  {
+    srcPart: 'gumdrop-3',
+    profile: {
+      centerOffset: Vector3.create(-2.127, 14.757, -11.436),
+      topOffset: 15.705,
+      radius: 1.55
+    }
+  },
+  {
     srcPart: 'gumdrop-4',
     profile: {
       centerOffset: Vector3.create(5.917, 17.996, -3.589),
       topOffset: 18.773,
       radius: 1.35
+    }
+  },
+  {
+    srcPart: 'gumdrop-5',
+    profile: {
+      centerOffset: Vector3.create(4.797, 20.479, 4.139),
+      topOffset: 21.555,
+      radius: 1.55
     }
   },
   {
@@ -245,6 +278,14 @@ const GUMDROP_PROFILES: { srcPart: string; profile: GumdropProfile }[] = [
       centerOffset: Vector3.create(0.949, 10.069, 10.614),
       topOffset: 11.149,
       radius: 1.65
+    }
+  },
+  {
+    srcPart: 'gumdrop-8',
+    profile: {
+      centerOffset: Vector3.create(-3.553, 3.516, 8.706),
+      topOffset: 4.469,
+      radius: 1.55
     }
   },
   {
@@ -408,15 +449,17 @@ function enableSceneModelColliders() {
   }
 }
 
-function getGumdropProfile(src: string): GumdropProfile | null {
+function getGumdropProfile(src: string, entityName = ''): GumdropProfile | null {
+  const identifier = `${src} ${entityName}`.toLowerCase()
   for (const entry of GUMDROP_PROFILES) {
-    if (src.includes(entry.srcPart)) return entry.profile
+    if (identifier.includes(entry.srcPart)) return entry.profile
   }
   return null
 }
 
-function isGumdropSrc(src: string) {
-  return src.includes('/gumdrop-') || src.includes('Models/gumdrop-')
+function isGumdropIdentifier(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  return identifier.includes('/gumdrop-') || identifier.includes('models/gumdrop-') || identifier.includes('gumdrop-')
 }
 
 function getGumdropCenter(gumdrop: GumdropSpot) {
@@ -1095,8 +1138,9 @@ export function main() {
   function ensureGumdropsInitialized() {
     for (const [entity, gltf, transform] of engine.getEntitiesWith(GltfContainer, Transform)) {
       if (gumdrops.some((g) => g.entity === entity)) continue
-      if (!isGumdropSrc(gltf.src)) continue
-      const profile = getGumdropProfile(gltf.src)
+      const entityName = Name.getOrNull(entity)?.value ?? ''
+      if (!isGumdropIdentifier(gltf.src, entityName)) continue
+      const profile = getGumdropProfile(gltf.src, entityName)
       if (!profile) continue
 
       gumdrops.push({
