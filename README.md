@@ -1,6 +1,6 @@
 # Candy Rush: Glide Adventure
 
-![Candy Rush](docs/readmeimage.png)
+![Candy Rush](docs/readmeimage.jpg)
 
 This Glide Adventure is a fast candy-world race where players bounce on jello, jump of falling gumdrops, and glide to  collect gummy bears before time runs out. Sweet, chaotic, and built for quick competitive fun.
 

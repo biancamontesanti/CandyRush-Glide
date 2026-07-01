@@ -275,7 +275,7 @@ function handleCloseFinish() {
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const RED = { r: 0.2, g: 1, b: 0.3, a: 1 }
+const RED = { r: 0.259, g: 0.384, b: 0.153, a: 1 }
 const BLUE = { r: 0.6, g: 0.2, b: 0.8, a: 1 }
 const GOLD = { r: 1, g: 0.84, b: 0, a: 1 }
 const WHT = { r: 1, g: 1, b: 1, a: 1 }
@@ -294,7 +294,7 @@ export const uiMenu = () => {
       ? { ...RED, a: popupAlpha }
       : _popupTeam === 'blue'
         ? { ...BLUE, a: popupAlpha }
-        : { r: 1, g: 0.9, b: 0.2, a: popupAlpha }
+        : { ...RED, a: popupAlpha }
   const popupText = _popupTeam === 'red' ? '+1  GREEN' : _popupTeam === 'blue' ? '+1  PURPLE' : '+ 1  Collected!'
 
   const teamColor = _localTeam === 'red' ? RED : BLUE
@@ -674,17 +674,19 @@ export const uiMenu = () => {
                 }}
                 onMouseDown={() => _modeSelectCallback?.('team')}
               />
-              <UiEntity
-                uiTransform={{
-                  width: _modeMenuCompact ? 236 : 328,
-                  height: _modeMenuCompact ? 27 : 37,
-                  margin: { bottom: _modeMenuCompact ? 11 : 15 }
-                }}
-                uiBackground={{
-                  textureMode: 'stretch',
-                  texture: { src: 'assets/ui/choosemodeui/teamvsteamdescription.png' }
-                }}
-              />
+              {!_modeMenuCompact && (
+                <UiEntity
+                  uiTransform={{
+                    width: 328,
+                    height: 37,
+                    margin: { bottom: 15 }
+                  }}
+                  uiBackground={{
+                    textureMode: 'stretch',
+                    texture: { src: 'assets/ui/choosemodeui/teamvsteamdescription.png' }
+                  }}
+                />
+              )}
             </UiEntity>
             <UiEntity uiTransform={{ flexDirection: 'column', alignItems: 'center', width: '100%' }}>
               <UiEntity
@@ -696,17 +698,19 @@ export const uiMenu = () => {
                 uiBackground={{ textureMode: 'stretch', texture: { src: 'assets/ui/choosemodeui/solorunbutton.png' } }}
                 onMouseDown={() => _modeSelectCallback?.('solo')}
               />
-              <UiEntity
-                uiTransform={{
-                  width: _modeMenuCompact ? 220 : 308,
-                  height: _modeMenuCompact ? 13 : 18,
-                  margin: { bottom: _modeMenuCompact ? 10 : 15 }
-                }}
-                uiBackground={{
-                  textureMode: 'stretch',
-                  texture: { src: 'assets/ui/choosemodeui/solomodedescription.png' }
-                }}
-              />
+              {!_modeMenuCompact && (
+                <UiEntity
+                  uiTransform={{
+                    width: 295,
+                    height: 15,
+                    margin: { bottom: 15 }
+                  }}
+                  uiBackground={{
+                    textureMode: 'stretch',
+                    texture: { src: 'assets/ui/choosemodeui/solomodedescription.png' }
+                  }}
+                />
+              )}
             </UiEntity>
           </UiEntity>
         </UiEntity>

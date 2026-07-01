@@ -698,24 +698,8 @@ function updateCandySurfaceEffects(dt: number, pos: { x: number; y: number; z: n
     return
   }
 
-  const onStripeSurface = stickyStripes.some((stripe) =>
-    isPlayerOnSurface(
-      pos,
-      stripe,
-      STRIPE_STICKY_VERTICAL_BELOW,
-      STRIPE_STICKY_VERTICAL_ABOVE,
-      STRIPE_STICKY_HORIZONTAL_PADDING
-    )
-  )
-  const inStripeGlue = onStripeSurface || stickyStripes.some((stripe) => isPlayerInStripeGlue(pos, stripe))
-  if (inStripeGlue) {
-    stripeGlueTimer = STRIPE_GLUE_HOLD_DURATION
-  } else {
-    stripeGlueTimer = Math.max(0, stripeGlueTimer - dt)
-  }
-  const onStickyStripe = inStripeGlue || stripeGlueTimer > 0
-  setStickyInput(onStickyStripe)
-  if (onStickyStripe && !activeJelloJump) applyStripeSlowDrag(pos)
+  stripeGlueTimer = 0
+  setStickyInput(false)
 
   if (activeJelloJump) {
     for (const jello of jellos) updateJelloAnimation(jello, dt)
@@ -1777,18 +1761,6 @@ export function main() {
   function ensureCandySurfacesInitialized() {
     for (const [entity, gltf, transform] of engine.getEntitiesWith(GltfContainer, Transform)) {
       const entityName = Name.getOrNull(entity)?.value ?? ''
-
-      if (isStripeIdentifier(gltf.src, entityName) && !stickyStripes.some((stripe) => stripe.entity === entity)) {
-        for (const profile of getStripeProfiles(gltf.src, entityName)) {
-          stickyStripes.push({
-            entity,
-            basePosition: Vector3.create(transform.position.x, transform.position.y, transform.position.z),
-            baseRotation: Quaternion.create(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w),
-            baseScale: Vector3.create(transform.scale.x, transform.scale.y, transform.scale.z),
-            profile
-          })
-        }
-      }
 
       if (isJelloIdentifier(gltf.src, entityName) && !jellos.some((jello) => jello.entity === entity)) {
         jellos.push({
