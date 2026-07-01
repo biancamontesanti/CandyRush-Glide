@@ -275,7 +275,7 @@ function handleCloseFinish() {
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const RED = { r: 0.259, g: 0.384, b: 0.153, a: 1 }
+const RED = { r: 0.2, g: 1, b: 0.3, a: 1 }
 const BLUE = { r: 0.6, g: 0.2, b: 0.8, a: 1 }
 const GOLD = { r: 1, g: 0.84, b: 0, a: 1 }
 const WHT = { r: 1, g: 1, b: 1, a: 1 }
@@ -1032,24 +1032,56 @@ export const uiMenu = () => {
               color={INK}
               uiTransform={{ margin: { left: 168, bottom: 8 } }}
             />
-            <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { top: 2 } }}>
-              <Label font="monospace" value={'GREEN'} fontSize={22} color={RED} />
+            <UiEntity
+              uiTransform={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 320,
+                height: 30,
+                margin: { top: 2 }
+              }}
+            >
               <Label
                 font="monospace"
-                value={`  ${_teamScores.red}  `}
+                value={'GREEN'}
+                fontSize={22}
+                color={RED}
+                textAlign="middle-right"
+                uiTransform={{ width: 82, height: 30 }}
+              />
+              <Label
+                font="monospace"
+                value={`${_teamScores.red}`}
                 fontSize={24}
                 color={RED}
-                uiTransform={{ margin: { left: 14 } }}
+                textAlign="middle-center"
+                uiTransform={{ width: 42, height: 30 }}
               />
-              <Label font="monospace" value={'|'} fontSize={24} color={{ r: 0.85, g: 0.45, b: 0.3, a: 1 }} />
               <Label
                 font="monospace"
-                value={`  ${_teamScores.blue}  `}
+                value={'|'}
+                fontSize={24}
+                color={{ r: 0.85, g: 0.45, b: 0.3, a: 1 }}
+                textAlign="middle-center"
+                uiTransform={{ width: 26, height: 30 }}
+              />
+              <Label
+                font="monospace"
+                value={`${_teamScores.blue}`}
                 fontSize={24}
                 color={BLUE}
-                uiTransform={{ margin: { right: 14 } }}
+                textAlign="middle-center"
+                uiTransform={{ width: 42, height: 30 }}
               />
-              <Label font="monospace" value={'PURPLE'} fontSize={22} color={BLUE} />
+              <Label
+                font="monospace"
+                value={'PURPLE'}
+                fontSize={22}
+                color={BLUE}
+                textAlign="middle-left"
+                uiTransform={{ width: 96, height: 30 }}
+              />
             </UiEntity>
             {/* {_localTeam && (
               <Label
@@ -1116,16 +1148,40 @@ export const uiMenu = () => {
             />
           )}
 
-          <UiEntity uiTransform={{ flexDirection: 'row', alignItems: 'center', margin: { bottom: 23 } }}>
-            <Label font="monospace" value={`${localScore}`} fontSize={64} color={resultLeftColor} />
+          <UiEntity
+            uiTransform={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 220,
+              height: 78,
+              margin: { bottom: 23 }
+            }}
+          >
             <Label
               font="monospace"
-              value={'  x  '}
+              value={`${localScore}`}
+              fontSize={64}
+              color={resultLeftColor}
+              textAlign="middle-center"
+              uiTransform={{ width: 72, height: 78 }}
+            />
+            <Label
+              font="monospace"
+              value={'x'}
               fontSize={34}
               color={INK}
-              uiTransform={{ margin: { top: 6 } }}
+              textAlign="middle-center"
+              uiTransform={{ width: 52, height: 78 }}
             />
-            <Label font="monospace" value={`${opponentScore}`} fontSize={64} color={resultRightColor} />
+            <Label
+              font="monospace"
+              value={`${opponentScore}`}
+              fontSize={64}
+              color={resultRightColor}
+              textAlign="middle-center"
+              uiTransform={{ width: 72, height: 78 }}
+            />
           </UiEntity>
 
           <UiEntity

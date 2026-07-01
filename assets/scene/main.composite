@@ -93,9 +93,9 @@
         "512": {
           "json": {
             "position": {
-              "x": 17.75,
-              "y": 0,
-              "z": 16.75
+              "x": 20.5,
+              "y": 13,
+              "z": 14.75
             },
             "scale": {
               "x": 1,
@@ -135,9 +135,9 @@
         "514": {
           "json": {
             "position": {
-              "x": 12.772208213806152,
+              "x": 11.522208213806152,
               "y": 13.5,
-              "z": 10.485901832580566
+              "z": 9.485901832580566
             },
             "scale": {
               "x": 1,
@@ -649,7 +649,7 @@
       "data": {
         "512": {
           "json": {
-            "src": "assets/scene/Models/jellpiece/jellpiece.glb",
+            "src": "assets/scene/Models/jellopiece/jellopiece.glb",
             "visibleMeshesCollisionMask": 0,
             "invisibleMeshesCollisionMask": 3
           }
@@ -846,7 +846,7 @@
       "data": {
         "512": {
           "json": {
-            "value": "jellpiece.glb"
+            "value": "jellopiece.glb"
           }
         },
         "513": {
@@ -1200,15 +1200,15 @@
                 "children": []
               },
               {
-                "entity": 512,
-                "children": []
-              },
-              {
                 "entity": 514,
                 "children": []
               },
               {
                 "entity": 517,
+                "children": []
+              },
+              {
+                "entity": 512,
                 "children": []
               }
             ]
@@ -1251,6 +1251,9 @@
           "json": {}
         },
         "517": {
+          "json": {}
+        },
+        "518": {
           "json": {}
         },
         "519": {

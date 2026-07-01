@@ -119,6 +119,9 @@ const STRIPE_SLOW_STEP_DURATION = 0.08
 const JELLO_BOUNCE_VERTICAL_BELOW = 0.55
 const JELLO_BOUNCE_VERTICAL_ABOVE = 1.25
 const JELLO_BOUNCE_HORIZONTAL_PADDING = 1.2
+const JELLOPIECE_BOUNCE_VERTICAL_BELOW = 0.18
+const JELLOPIECE_BOUNCE_VERTICAL_ABOVE = 0.55
+const JELLOPIECE_BOUNCE_HORIZONTAL_PADDING = 0.05
 const JELLO_BOUNCE_COOLDOWN = 0.6
 const JELLO_BOUNCE_DURATION = 0.5
 const JELLO_SUPER_JUMP_HEIGHT = 5.5
@@ -406,13 +409,13 @@ const JELLO_SURFACE_PROFILE: SurfaceProfile = {
 }
 
 const JELLPIECE_SURFACE_PROFILE: SurfaceProfile = {
-  localCenter: Vector3.create(-0.14, 14.929, 0.127),
-  halfExtents: Vector3.create(4.28, 3.5, 3.79)
+  localCenter: Vector3.create(0.85, 0.473, -0.186),
+  halfExtents: Vector3.create(3.45, 3.54, 2.8)
 }
 
 const JELLOPIECE_SURFACE_PROFILE: SurfaceProfile = {
-  localCenter: Vector3.create(-2.381, 13.328, -0.419),
-  halfExtents: Vector3.create(3.65, 3.56, 2.87)
+  localCenter: Vector3.create(0.85, 0.473, -0.186),
+  halfExtents: Vector3.create(3.45, 3.54, 2.8)
 }
 
 // ── Slot helpers ──────────────────────────────────────────────────────────────

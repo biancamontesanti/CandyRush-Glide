@@ -20,7 +20,7 @@ export enum EntityNames {
   gumdrop_5_glb = "gumdrop-5.glb",
   gumdrop_9_glb = "gumdrop-9.glb",
   jello_glb = "jello.glb",
-  jellpiece_glb = "jellpiece.glb",
+  jellopiece_glb = "jellopiece.glb",
   lollipops_glb = "lollipops.glb",
   redjujubes_glb = "redjujubes.glb",
   ring_glb = "ring.glb",
