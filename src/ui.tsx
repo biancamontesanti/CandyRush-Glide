@@ -1,4 +1,4 @@
-import ReactEcs, { ReactEcsRenderer, UiEntity, Label, Button } from '@dcl/sdk/react-ecs'
+import ReactEcs, { ReactEcsRenderer, UiEntity, Label } from '@dcl/sdk/react-ecs'
 
 export type LeaderboardEntry = { time: number; name?: string; userId?: string }
 type Team = 'red' | 'blue'
@@ -139,10 +139,13 @@ export function updateSoloState(
   remaining: number,
   leaderboard: LeaderboardEntry[]
 ) {
+  const previousPhase = _soloPhase
   _gameMode = 'solo'
   _soloPhase = phase
   _soloRemaining = remaining
-  if (phase === 'idle') _soloTotal = remaining
+  if (phase === 'idle' || (phase === 'playing' && previousPhase !== 'playing')) {
+    _soloTotal = remaining
+  }
   _lb = leaderboard.slice()
 }
 
@@ -257,6 +260,15 @@ function handleCloseLobby() {
   closeUiState()
 }
 
+function handleJoinTeam(team: 1 | 2) {
+  if (_myLobbyUserId) {
+    _lobbyPlayers = _lobbyPlayers.map((player) =>
+      player.userId === _myLobbyUserId ? { ...player, chosenTeam: team } : player
+    )
+  }
+  _joinTeamCallback?.(team)
+}
+
 function handleCloseFinish() {
   _closeFinishCallback?.()
   closeUiState()
@@ -367,8 +379,6 @@ export const uiMenu = () => {
           const diff = Math.abs(redPlayers.length - bluePlayers.length)
           const myTeam = _lobbyPlayers.find((p) => p.userId === _myLobbyUserId)?.chosenTeam ?? 0
 
-          const WARN_ORG = { r: 1, g: 0.55, b: 0, a: 1 }
-
           let warningText = ''
           let warningColor = GRY
 
@@ -381,7 +391,7 @@ export const uiMenu = () => {
             warningColor = YLW
           } else if (redPlayers.length === 0 || bluePlayers.length === 0) {
             warningText = 'Each team needs at least 1 player!'
-            warningColor = WARN_ORG
+            warningColor = INK
           } else if (diff >= 3) {
             warningText = `⚠️ Very uneven! ${redPlayers.length} vs ${bluePlayers.length}  — rebalance for a fair fight`
             warningColor = { r: 1, g: 0.3, b: 0.3, a: 1 }
@@ -468,7 +478,7 @@ export const uiMenu = () => {
 	                    padding: { top: 92, bottom: 22, left: 14, right: 14 },
 	                    margin: { right: 12 }
 	                  }}
-	                  onMouseDown={() => _joinTeamCallback?.(1)}
+	                  onMouseDown={() => handleJoinTeam(1)}
 	                >
 	                  <UiEntity
 	                    uiTransform={{
@@ -503,7 +513,7 @@ export const uiMenu = () => {
                     />
                   ))}
                   <UiEntity uiTransform={{ flex: 1 }} />
-                  <Label font="sans-serif" value={myTeam === 1 ? '> YOU' : '> JOIN'} fontSize={20} color={YLW} />
+                  <Label font="sans-serif" value={myTeam === 1 ? '> YOU' : 'JOIN'} fontSize={20} color={myTeam === 1 ? YLW : GRY} />
                 </UiEntity>
 
                 {/* PURPLE column */}
@@ -517,7 +527,7 @@ export const uiMenu = () => {
 	                    padding: { top: 92, bottom: 22, left: 14, right: 14 },
 	                    margin: { left: 12 }
 	                  }}
-	                  onMouseDown={() => _joinTeamCallback?.(2)}
+	                  onMouseDown={() => handleJoinTeam(2)}
 	                >
 	                  <UiEntity
 	                    uiTransform={{
@@ -552,7 +562,7 @@ export const uiMenu = () => {
                     />
                   ))}
                   <UiEntity uiTransform={{ flex: 1 }} />
-                  <Label font="sans-serif" value={myTeam === 2 ? '> YOU' : '> JOIN'} fontSize={20} color={YLW} />
+                  <Label font="sans-serif" value={myTeam === 2 ? '> YOU' : 'JOIN'} fontSize={20} color={myTeam === 2 ? YLW : GRY} />
                 </UiEntity>
               </UiEntity>
 
@@ -593,11 +603,12 @@ export const uiMenu = () => {
               {/* Host controls */}
               <UiEntity uiTransform={{ flexDirection: 'row', margin: { top: 10 }, alignItems: 'center' }}>
                 {_lobbyIsHost && _lobbyCanStart && (
-                  <Button
-                    value={_lobbyTimeLeft >= 0 ? 'START NOW' : 'START MATCH'}
-                    variant={'primary'}
-                    fontSize={14}
-                    uiTransform={{ width: 150, height: 35, margin: { right: 10 } }}
+                  <UiEntity
+                    uiTransform={{ width: 260, height: 50, margin: { right: 10 } }}
+                    uiBackground={{
+                      textureMode: 'stretch',
+                      texture: { src: 'assets/ui/teambattlelobby/startmatchnow.png' }
+                    }}
                     onMouseDown={() => _forceStartCallback?.()}
                   />
                 )}
@@ -774,11 +785,17 @@ export const uiMenu = () => {
                 />
                 <Label
                   font="monospace"
-                  value={`${Math.max(0, _soloTotal - _soloRemaining)} x ${_soloTotal}`}
-                  fontSize={19}
+                  value={`${Math.ceil(Math.max(0, _soloRemaining))} LEFT`}
+                  fontSize={24}
                   color={RED}
                   uiTransform={{ margin: { top: 6 } }}
                 />
+                {/* <Label
+                  font="monospace"
+                  value={'TO COLLECT'}
+                  fontSize={15}
+                  color={INK}
+                /> */}
               </UiEntity>
             )}
           </UiEntity>
@@ -1030,7 +1047,7 @@ export const uiMenu = () => {
               />
               <Label font="monospace" value={'PURPLE'} fontSize={22} color={BLUE} />
             </UiEntity>
-            {_localTeam && (
+            {/* {_localTeam && (
               <Label
                 font="sans-serif"
                 value={`You: ${teamLabel} team`}
@@ -1038,7 +1055,7 @@ export const uiMenu = () => {
                 color={teamColor}
                 uiTransform={{ margin: { top: 8, left: 158 } }}
               />
-            )}
+            )} */}
           </UiEntity>
 
           <UiEntity

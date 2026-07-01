@@ -13,7 +13,8 @@ import {
   MainCamera,
   Name,
   TriggerArea,
-  triggerAreaEventsSystem
+  triggerAreaEventsSystem,
+  AssetLoad
 } from '@dcl/sdk/ecs'
 import { Quaternion, Vector3 } from '@dcl/sdk/math'
 import { getPlayerPosition } from '@dcl-sdk/utils'
@@ -40,31 +41,45 @@ import {
 } from './ui'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const COLLECT_SOUND = 'assets/sounds/collect.wav'
-const BLUEBERRY_SRC = 'assets/scene/Models/BLUEBERRY/BLUEBERRY.glb'
-const STRAWBERRY_SRC = 'assets/scene/Models/STRAWBERRY/STRAWBERRY.glb'
+const MUSIC_SOUND = 'assets/sounds/musicthemeloop.mp3'
+const COLLECT_SOUND = 'assets/sounds/collected.mp3'
+const COUNTDOWN_SOUND = 'assets/sounds/countdown3sec.mp3'
+const VICTORY_SOUND = 'assets/sounds/victory.mp3'
+const LOST_SOUND = 'assets/sounds/lost.mp3'
+const DRAW_SOUND = 'assets/sounds/draw.mp3'
+const SOUND_ASSETS = [MUSIC_SOUND, COLLECT_SOUND, COUNTDOWN_SOUND, VICTORY_SOUND, LOST_SOUND, DRAW_SOUND]
+const GREEN_BEAR_SRC = 'assets/scene/Models/beargreen/beargreen.glb'
+const PURPLE_BEAR_SRC = 'assets/scene/Models/bearpurple/bearpurple.glb'
+const STRAWBERRY_SPOT_SRC = 'assets/scene/Models/STRAWBERRY/STRAWBERRY.glb'
+const STRIPES_SRC = 'assets/scene/Models/stripes/stripes.glb'
+const JELLO_SRC = 'assets/scene/Models/jello/jello.glb'
+const JELLPIECE_SRC = 'assets/scene/Models/jellpiece/jellpiece.glb'
+const JELLOPIECE_SRC = 'assets/scene/Models/jellopiece/jellopiece.glb'
+const RING_SRC_PART = '/ring/'
 
-const TEAM_COUNTDOWN = 120
+const TEAM_COUNTDOWN = 300
 const BERRY_RESPAWN_DELAY = 20
 const SOLO_PREGAME_DURATION = 4.99
 const TEAM_ASSIGN_INTRO_DURATION = 3
 const TEAM_READY_INTRO_DURATION = 3
 const TEAM_COUNTDOWN_DURATION = 4
+const COUNTDOWN_SOUND_START_DELAY = 1.13
+const COUNTDOWN_SOUND_TRIGGER_REMAINING = Math.max(0, TEAM_COUNTDOWN_DURATION - COUNTDOWN_SOUND_START_DELAY)
 const TEAM_PREGAME_DURATION = TEAM_ASSIGN_INTRO_DURATION + TEAM_READY_INTRO_DURATION + TEAM_COUNTDOWN_DURATION
 const TEAM_PREGAME_DURATION_MS = Math.ceil(TEAM_PREGAME_DURATION * 1000)
 // How long to wait after teams are ready before the match auto-starts.
 // Players can still switch teams or new players can join during this window.
 const LOBBY_START_DELAY_MS = 30_000 // 30 seconds
 
-const STRAWBERRY_SCALE_MULTIPLIER = 0.8
-const BLUEBERRY_SCALE_MULTIPLIER = 0.8
-const STRAWBERRY_CENTER_OFFSET = Vector3.create(9.977967, 0.118668, -3.692565)
-const BLUEBERRY_CENTER_OFFSET = Vector3.create(13.098664, -2.31526, -2.112536)
-const BERRY_HALF_EXTENTS = Vector3.create(1.2063, 1.6856, 0.8195)
+const GREEN_BEAR_SCALE_MULTIPLIER = 0.8
+const PURPLE_BEAR_SCALE_MULTIPLIER = 0.8
+const GREEN_BEAR_CENTER_OFFSET = Vector3.create(-0.024, 0.026, 0.065)
+const PURPLE_BEAR_CENTER_OFFSET = Vector3.create(-0.032, -0.003, 0.089)
+const BEAR_HALF_EXTENTS = Vector3.create(1.2063, 1.6856, 0.8195)
 const PLAYER_TOUCH_HEIGHT = 1.9
-const BERRY_TOUCH_AVATAR_RADIUS = 2.25
-const BERRY_TOUCH_VERTICAL_PADDING = 4
-const BERRY_TRIGGER_EXTRA_RADIUS = 1.5
+const BERRY_TOUCH_AVATAR_RADIUS = 0.75
+const BERRY_TOUCH_VERTICAL_PADDING = 1.2
+const BERRY_TRIGGER_EXTRA_RADIUS = 0.35
 
 // Lobby spawn position — center of parcel, just inside
 const LOBBY_X = 8,
@@ -80,14 +95,35 @@ const STRAWBERRY_NAMES = [
   'STRAWBERRY.glb_6',
   'STRAWBERRY.glb_7'
 ]
+const BERRY_SPOT_TARGET_COUNT = 6
+const RING_ROTATION_SPEED_DEGREES = 70
 const GUMDROP_FALL_DURATION = 0.45
 const GUMDROP_FALL_DELAY = 2
 const GUMDROP_FALL_DISTANCE = 3.2
 const GUMDROP_RESPAWN_DELAY = 3
-const GUMDROP_TOUCH_RADIUS_PADDING = 1.75
-const GUMDROP_TOUCH_Y_BELOW = 2.5
-const GUMDROP_TOUCH_Y_ABOVE = 4
+const GUMDROP_TOUCH_RADIUS_PADDING = 0.55
+const GUMDROP_TOUCH_Y_BELOW = 0.45
+const GUMDROP_TOUCH_Y_ABOVE = 1.15
 const GUMDROP_TRIGGER_HEIGHT = GUMDROP_TOUCH_Y_BELOW + GUMDROP_TOUCH_Y_ABOVE
+const GUMDROP_SHAKE_AMPLITUDE = 0.08
+const GUMDROP_SHAKE_SPEED = 34
+const STRIPE_STICKY_VERTICAL_BELOW = 1.4
+const STRIPE_STICKY_VERTICAL_ABOVE = 3
+const STRIPE_STICKY_HORIZONTAL_PADDING = 1.5
+const STRIPE_GLUE_VERTICAL_PADDING_BELOW = 2.2
+const STRIPE_GLUE_VERTICAL_PADDING_ABOVE = 3.2
+const STRIPE_GLUE_HORIZONTAL_PADDING = 3
+const STRIPE_GLUE_HOLD_DURATION = 0.18
+const STRIPE_SLOW_DRAG = 0.28
+const STRIPE_SLOW_STEP_DURATION = 0.08
+const JELLO_BOUNCE_VERTICAL_BELOW = 0.55
+const JELLO_BOUNCE_VERTICAL_ABOVE = 1.25
+const JELLO_BOUNCE_HORIZONTAL_PADDING = 1.2
+const JELLO_BOUNCE_COOLDOWN = 0.6
+const JELLO_BOUNCE_DURATION = 0.5
+const JELLO_SUPER_JUMP_HEIGHT = 5.5
+const JELLO_SUPER_JUMP_ASCENT_DURATION = 1
+const JELLO_SUPER_JUMP_STEP_DURATION = 0.1
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Team = 'red' | 'blue'
@@ -128,6 +164,37 @@ type GumdropSpot = {
   delayTimer: number
   fallTimer: number
   respawnTimer: number
+}
+
+type RingSpot = {
+  entity: Entity
+  basePosition: { x: number; y: number; z: number }
+  baseRotation: { x: number; y: number; z: number; w: number }
+  angle: number
+}
+
+type SurfaceProfile = {
+  localCenter: { x: number; y: number; z: number }
+  halfExtents: { x: number; y: number; z: number }
+}
+
+type CandySurface = {
+  entity: Entity
+  basePosition: { x: number; y: number; z: number }
+  baseRotation: { x: number; y: number; z: number; w: number }
+  baseScale: { x: number; y: number; z: number }
+  profile: SurfaceProfile
+}
+
+type JelloSurface = CandySurface & {
+  bounceTimer: number
+  cooldownTimer: number
+  wasPlayerOnTop: boolean
+}
+
+type ActiveJelloJump = {
+  startY: number
+  elapsed: number
 }
 
 type LobbyPlayer = { userId: string; token: number }
@@ -226,13 +293,22 @@ let hasCalibratedOffset = false
 let wasStateSynchronizedLastFrame = false
 
 const spots: BerrySpot[] = []
+const berrySpotMarkers = new Set<Entity>()
 const gumdrops: GumdropSpot[] = []
+const rings: RingSpot[] = []
+const stickyStripes: CandySurface[] = []
+const jellos: JelloSurface[] = []
 const collisionReadyModels = new Set<Entity>()
 const leaderboard: LeaderboardEntry[] = []
 const LEADERBOARD_MAX = 5
 
 // Cinematic camera entity (created once in main)
 let cinematicCam: Entity
+let stickyInputApplied = false
+let stripeGlueTimer = 0
+let previousPlayerY = 0
+let previousPlayerPosition: { x: number; y: number; z: number } | null = null
+let activeJelloJump: ActiveJelloJump | null = null
 
 const GUMDROP_PROFILES: { srcPart: string; profile: GumdropProfile }[] = [
   {
@@ -309,6 +385,36 @@ const GUMDROP_PROFILES: { srcPart: string; profile: GumdropProfile }[] = [
   }
 ]
 
+const STRIPE_SURFACE_PROFILES: SurfaceProfile[] = [
+  {
+    localCenter: Vector3.create(-4.672, 17.223, 5.472),
+    halfExtents: Vector3.create(9.08, 4.39, 7.89)
+  },
+  {
+    localCenter: Vector3.create(-3.202, 20.84, -1.922),
+    halfExtents: Vector3.create(8.85, 3.86, 6.8)
+  },
+  {
+    localCenter: Vector3.create(7.397, 27.477, 1.787),
+    halfExtents: Vector3.create(7.48, 2.17, 9.3)
+  }
+]
+
+const JELLO_SURFACE_PROFILE: SurfaceProfile = {
+  localCenter: Vector3.create(3.036, 4.04, -0.462),
+  halfExtents: Vector3.create(9.54, 3.92, 9.68)
+}
+
+const JELLPIECE_SURFACE_PROFILE: SurfaceProfile = {
+  localCenter: Vector3.create(-0.14, 14.929, 0.127),
+  halfExtents: Vector3.create(4.28, 3.5, 3.79)
+}
+
+const JELLOPIECE_SURFACE_PROFILE: SurfaceProfile = {
+  localCenter: Vector3.create(-2.381, 13.328, -0.419),
+  halfExtents: Vector3.create(3.65, 3.56, 2.87)
+}
+
 // ── Slot helpers ──────────────────────────────────────────────────────────────
 function soloRemaining() {
   return spots.filter((s) => !s.red.collected).length
@@ -316,6 +422,11 @@ function soloRemaining() {
 
 function showSlot(slot: TeamSlot, visible: boolean) {
   VisibilityComponent.createOrReplace(slot.entity, { visible })
+  if (GltfContainer.has(slot.entity)) {
+    const gltf = GltfContainer.getMutable(slot.entity)
+    gltf.visibleMeshesCollisionMask = visible ? ColliderLayer.CL_POINTER : 0
+    gltf.invisibleMeshesCollisionMask = 0
+  }
 }
 
 function resetSlot(slot: TeamSlot, show: boolean) {
@@ -327,46 +438,40 @@ function resetSlot(slot: TeamSlot, show: boolean) {
 
 function hideAllBerries() {
   for (const s of spots) {
-    VisibilityComponent.createOrReplace(s.red.entity, { visible: false })
+    showSlot(s.red, false)
+    showSlot(s.blue, false)
+  }
+}
+
+function refreshBerrySpots() {
+  for (const s of spots) {
+    updateBerryRepresentation(s)
+    updateBerryTrigger(s)
   }
 }
 
 function updateBerryRepresentation(spot: BerrySpot) {
-  const entity = spot.red.entity
-  if (!GltfContainer.has(entity)) return
-  const gltf = GltfContainer.getMutable(entity)
+  const shouldShowTeamCollectibles =
+    gameMode === 'team' && !!localTeam && (teamPhase === 'countdown' || teamPhase === 'playing')
+  const redVisible =
+    (gameMode === 'solo' && soloPhase === 'playing' && !spot.red.collected) ||
+    (shouldShowTeamCollectibles &&
+      localTeam === 'red' &&
+      (teamPhase !== 'playing' || !spot.red.collected))
+  const blueVisible =
+    shouldShowTeamCollectibles &&
+    localTeam === 'blue' &&
+    (teamPhase !== 'playing' || !spot.blue.collected)
 
-  if (gameMode === 'team' && localTeam === 'blue') {
-    if (gltf.src !== BLUEBERRY_SRC) {
-      gltf.src = BLUEBERRY_SRC
-      Transform.getMutable(entity).scale = scaledBerry(spot.baseScale, BLUEBERRY_SCALE_MULTIPLIER)
-    }
-    const isVisible = teamPhase === 'playing' && !spot.blue.collected
-    VisibilityComponent.createOrReplace(entity, { visible: isVisible })
-    if (isVisible) {
-      gltf.visibleMeshesCollisionMask = ColliderLayer.CL_POINTER
-      gltf.invisibleMeshesCollisionMask = 0
-    } else {
-      gltf.visibleMeshesCollisionMask = 0
-      gltf.invisibleMeshesCollisionMask = 0
-    }
-  } else {
-    if (gltf.src !== STRAWBERRY_SRC) {
-      gltf.src = STRAWBERRY_SRC
-      Transform.getMutable(entity).scale = scaledBerry(spot.baseScale, STRAWBERRY_SCALE_MULTIPLIER)
-    }
-    const isVisible =
-      (gameMode === 'solo' && soloPhase === 'playing' && !spot.red.collected) ||
-      (gameMode === 'team' && teamPhase === 'playing' && localTeam === 'red' && !spot.red.collected)
-    VisibilityComponent.createOrReplace(entity, { visible: isVisible })
-    if (isVisible) {
-      gltf.visibleMeshesCollisionMask = ColliderLayer.CL_POINTER
-      gltf.invisibleMeshesCollisionMask = 0
-    } else {
-      gltf.visibleMeshesCollisionMask = 0
-      gltf.invisibleMeshesCollisionMask = 0
-    }
+  if (Transform.has(spot.red.entity)) {
+    Transform.getMutable(spot.red.entity).scale = scaledBerry(spot.baseScale, GREEN_BEAR_SCALE_MULTIPLIER)
   }
+  if (Transform.has(spot.blue.entity)) {
+    Transform.getMutable(spot.blue.entity).scale = scaledBerry(spot.baseScale, PURPLE_BEAR_SCALE_MULTIPLIER)
+  }
+
+  showSlot(spot.red, redVisible)
+  showSlot(spot.blue, blueVisible)
 }
 
 function closeLobby() {
@@ -395,65 +500,308 @@ function scaleVector(v: { x: number; y: number; z: number }, scale: { x: number;
   return Vector3.create(v.x * scale.x, v.y * scale.y, v.z * scale.z)
 }
 
+function rotateVectorByQuaternion(
+  v: { x: number; y: number; z: number },
+  q: { x: number; y: number; z: number; w: number }
+) {
+  const tx = 2 * (q.y * v.z - q.z * v.y)
+  const ty = 2 * (q.z * v.x - q.x * v.z)
+  const tz = 2 * (q.x * v.y - q.y * v.x)
+
+  return Vector3.create(
+    v.x + q.w * tx + (q.y * tz - q.z * ty),
+    v.y + q.w * ty + (q.z * tx - q.x * tz),
+    v.z + q.w * tz + (q.x * ty - q.y * tx)
+  )
+}
+
+function getSurfaceBox(surface: CandySurface) {
+  const scaledCenter = scaleVector(surface.profile.localCenter, surface.baseScale)
+  const rotatedCenter = rotateVectorByQuaternion(scaledCenter, surface.baseRotation)
+  const scaledHalf = scaleVector(surface.profile.halfExtents, {
+    x: Math.abs(surface.baseScale.x),
+    y: Math.abs(surface.baseScale.y),
+    z: Math.abs(surface.baseScale.z)
+  })
+  const rotatedHalfX = rotateVectorByQuaternion(Vector3.create(scaledHalf.x, 0, 0), surface.baseRotation)
+  const rotatedHalfZ = rotateVectorByQuaternion(Vector3.create(0, 0, scaledHalf.z), surface.baseRotation)
+  const half = Vector3.create(
+    Math.abs(rotatedHalfX.x) + Math.abs(rotatedHalfZ.x),
+    scaledHalf.y,
+    Math.abs(rotatedHalfX.z) + Math.abs(rotatedHalfZ.z)
+  )
+  const center = Vector3.create(
+    surface.basePosition.x + rotatedCenter.x,
+    surface.basePosition.y + rotatedCenter.y,
+    surface.basePosition.z + rotatedCenter.z
+  )
+
+  return {
+    center,
+    half,
+    topY: center.y + half.y
+  }
+}
+
+function isPlayerOnSurface(
+  pos: { x: number; y: number; z: number },
+  surface: CandySurface,
+  below: number,
+  above: number,
+  horizontalPadding: number
+) {
+  const box = getSurfaceBox(surface)
+  return (
+    Math.abs(pos.x - box.center.x) <= box.half.x + horizontalPadding &&
+    Math.abs(pos.z - box.center.z) <= box.half.z + horizontalPadding &&
+    pos.y >= box.topY - below &&
+    pos.y <= box.topY + above
+  )
+}
+
+function isPlayerInStripeGlue(pos: { x: number; y: number; z: number }, stripe: CandySurface) {
+  const box = getSurfaceBox(stripe)
+  return (
+    Math.abs(pos.x - box.center.x) <= box.half.x + STRIPE_GLUE_HORIZONTAL_PADDING &&
+    Math.abs(pos.z - box.center.z) <= box.half.z + STRIPE_GLUE_HORIZONTAL_PADDING &&
+    pos.y >= box.center.y - box.half.y - STRIPE_GLUE_VERTICAL_PADDING_BELOW &&
+    pos.y <= box.center.y + box.half.y + STRIPE_GLUE_VERTICAL_PADDING_ABOVE
+  )
+}
+
+function isStripeIdentifier(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  return src === STRIPES_SRC || identifier.includes('/stripes/') || identifier.includes('/stripe') || identifier.includes('stripe')
+}
+
+function getStripeProfiles(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  if (identifier.includes('stripe1')) return [STRIPE_SURFACE_PROFILES[0]]
+  if (identifier.includes('stripe2')) return [STRIPE_SURFACE_PROFILES[2]]
+  if (identifier.includes('stripe3')) return [STRIPE_SURFACE_PROFILES[1]]
+  return STRIPE_SURFACE_PROFILES
+}
+
+function isJelloIdentifier(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  return (
+    src === JELLO_SRC ||
+    src === JELLPIECE_SRC ||
+    src === JELLOPIECE_SRC ||
+    identifier.includes('/jello/') ||
+    identifier.includes('jello.glb') ||
+    identifier.includes('/jellpiece/') ||
+    identifier.includes('jellpiece.glb') ||
+    identifier.includes('/jellopiece/') ||
+    identifier.includes('jellopiece.glb')
+  )
+}
+
+function getJelloProfile(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  if (identifier.includes('jellopiece')) return JELLOPIECE_SURFACE_PROFILE
+  return identifier.includes('jellpiece') ? JELLPIECE_SURFACE_PROFILE : JELLO_SURFACE_PROFILE
+}
+
+function setStickyInput(active: boolean) {
+  if (active) {
+    InputModifier.createOrReplace(engine.PlayerEntity, {
+      mode: InputModifier.Mode.Standard({
+        disableJog: true,
+        disableRun: true,
+        disableGliding: true
+      })
+    })
+    stickyInputApplied = true
+    return
+  }
+
+  if (stickyInputApplied) {
+    InputModifier.deleteFrom(engine.PlayerEntity)
+    stickyInputApplied = false
+  }
+}
+
+function applyStripeSlowDrag(pos: { x: number; y: number; z: number }) {
+  if (!previousPlayerPosition) return
+
+  const dx = pos.x - previousPlayerPosition.x
+  const dz = pos.z - previousPlayerPosition.z
+  const movedHorizontal = dx * dx + dz * dz
+  if (movedHorizontal < 0.0004) return
+
+  void movePlayerTo({
+    newRelativePosition: Vector3.create(pos.x - dx * STRIPE_SLOW_DRAG, pos.y, pos.z - dz * STRIPE_SLOW_DRAG),
+    duration: STRIPE_SLOW_STEP_DURATION
+  })
+}
+
+function updateJelloAnimation(jello: JelloSurface, dt: number) {
+  if (!Transform.has(jello.entity)) return
+
+  jello.bounceTimer = Math.max(0, jello.bounceTimer - dt)
+  jello.cooldownTimer = Math.max(0, jello.cooldownTimer - dt)
+
+  const transform = Transform.getMutable(jello.entity)
+  if (jello.bounceTimer <= 0) {
+    transform.position = Vector3.create(jello.basePosition.x, jello.basePosition.y, jello.basePosition.z)
+    transform.scale = Vector3.create(jello.baseScale.x, jello.baseScale.y, jello.baseScale.z)
+    return
+  }
+
+  const progress = 1 - jello.bounceTimer / JELLO_BOUNCE_DURATION
+  const fade = 1 - progress
+  const wave = Math.sin(progress * Math.PI * 4)
+  const stretch = wave * 0.22 * fade
+  transform.position = Vector3.create(jello.basePosition.x, jello.basePosition.y + Math.abs(wave) * 0.16 * fade, jello.basePosition.z)
+  transform.scale = Vector3.create(
+    jello.baseScale.x * (1 - stretch * 0.35),
+    jello.baseScale.y * (1 + stretch),
+    jello.baseScale.z * (1 - stretch * 0.35)
+  )
+}
+
+function startJelloJump(pos: { x: number; y: number; z: number }) {
+  activeJelloJump = {
+    startY: pos.y,
+    elapsed: 0
+  }
+}
+
+function updateActiveJelloJump(dt: number, pos: { x: number; y: number; z: number }) {
+  if (!activeJelloJump) return false
+
+  activeJelloJump.elapsed = Math.min(JELLO_SUPER_JUMP_ASCENT_DURATION, activeJelloJump.elapsed + dt)
+  const t = activeJelloJump.elapsed / JELLO_SUPER_JUMP_ASCENT_DURATION
+  const easedUp = 1 - (1 - t) * (1 - t)
+  const jumpY = activeJelloJump.startY + JELLO_SUPER_JUMP_HEIGHT * easedUp
+
+  void movePlayerTo({
+    newRelativePosition: Vector3.create(pos.x, jumpY, pos.z),
+    duration: JELLO_SUPER_JUMP_STEP_DURATION
+  })
+
+  if (activeJelloJump.elapsed >= JELLO_SUPER_JUMP_ASCENT_DURATION) {
+    activeJelloJump = null
+  }
+
+  return true
+}
+
+function updateCandySurfaceEffects(dt: number, pos: { x: number; y: number; z: number }) {
+  if (teamPhase === 'finished' || soloPhase === 'finished') {
+    activeJelloJump = null
+    stripeGlueTimer = 0
+    setStickyInput(false)
+    previousPlayerY = pos.y
+    previousPlayerPosition = Vector3.create(pos.x, pos.y, pos.z)
+    return
+  }
+
+  const onStripeSurface = stickyStripes.some((stripe) =>
+    isPlayerOnSurface(
+      pos,
+      stripe,
+      STRIPE_STICKY_VERTICAL_BELOW,
+      STRIPE_STICKY_VERTICAL_ABOVE,
+      STRIPE_STICKY_HORIZONTAL_PADDING
+    )
+  )
+  const inStripeGlue = onStripeSurface || stickyStripes.some((stripe) => isPlayerInStripeGlue(pos, stripe))
+  if (inStripeGlue) {
+    stripeGlueTimer = STRIPE_GLUE_HOLD_DURATION
+  } else {
+    stripeGlueTimer = Math.max(0, stripeGlueTimer - dt)
+  }
+  const onStickyStripe = inStripeGlue || stripeGlueTimer > 0
+  setStickyInput(onStickyStripe)
+  if (onStickyStripe && !activeJelloJump) applyStripeSlowDrag(pos)
+
+  if (activeJelloJump) {
+    for (const jello of jellos) updateJelloAnimation(jello, dt)
+    updateActiveJelloJump(dt, pos)
+    previousPlayerY = pos.y
+    previousPlayerPosition = Vector3.create(pos.x, pos.y, pos.z)
+    return
+  }
+
+  const verticalVelocity = dt > 0 ? (pos.y - previousPlayerY) / dt : 0
+  for (const jello of jellos) {
+    updateJelloAnimation(jello, dt)
+    const box = getSurfaceBox(jello)
+    const onJello = isPlayerOnSurface(
+      pos,
+      jello,
+      JELLO_BOUNCE_VERTICAL_BELOW,
+      JELLO_BOUNCE_VERTICAL_ABOVE,
+      JELLO_BOUNCE_HORIZONTAL_PADDING
+    )
+    const newTopTouch = onJello && !jello.wasPlayerOnTop
+
+    if (newTopTouch && verticalVelocity <= 0.4 && jello.cooldownTimer <= 0) {
+      jello.bounceTimer = JELLO_BOUNCE_DURATION
+      jello.cooldownTimer = JELLO_BOUNCE_COOLDOWN
+      jello.wasPlayerOnTop = false
+      startJelloJump(pos)
+    } else {
+      jello.wasPlayerOnTop = onJello
+    }
+  }
+
+  previousPlayerY = pos.y
+  previousPlayerPosition = Vector3.create(pos.x, pos.y, pos.z)
+}
+
 function getBerryVisualCenter(spot: BerrySpot) {
-  const useBlueberry = gameMode === 'team' && localTeam === 'blue'
-  const modelOffset = useBlueberry ? BLUEBERRY_CENTER_OFFSET : STRAWBERRY_CENTER_OFFSET
-  const modelScale = scaledBerry(spot.baseScale, useBlueberry ? BLUEBERRY_SCALE_MULTIPLIER : STRAWBERRY_SCALE_MULTIPLIER)
+  const usePurpleBear = gameMode === 'team' && localTeam === 'blue'
+  const modelOffset = usePurpleBear ? PURPLE_BEAR_CENTER_OFFSET : GREEN_BEAR_CENTER_OFFSET
+  const modelScale = scaledBerry(spot.baseScale, usePurpleBear ? PURPLE_BEAR_SCALE_MULTIPLIER : GREEN_BEAR_SCALE_MULTIPLIER)
   const offset = scaleVector(modelOffset, modelScale)
   return Vector3.create(spot.x + offset.x, spot.y + offset.y, spot.z + offset.z)
 }
 
 function getActiveBerryHalfExtents(spot: BerrySpot) {
-  const multiplier = gameMode === 'team' && localTeam === 'blue' ? BLUEBERRY_SCALE_MULTIPLIER : STRAWBERRY_SCALE_MULTIPLIER
+  const multiplier = gameMode === 'team' && localTeam === 'blue' ? PURPLE_BEAR_SCALE_MULTIPLIER : GREEN_BEAR_SCALE_MULTIPLIER
   const scale = scaledBerry(spot.baseScale, multiplier)
-  return scaleVector(BERRY_HALF_EXTENTS, scale)
+  return scaleVector(BEAR_HALF_EXTENTS, scale)
 }
 
 function isPlayerTouchingBerry(pos: { x: number; y: number; z: number }, spot: BerrySpot) {
   const visualCenter = getBerryVisualCenter(spot)
-  const originCenter = Vector3.create(spot.x, spot.y, spot.z)
   const half = getActiveBerryHalfExtents(spot)
   const horizontalRadius = Math.max(half.x, half.z) + BERRY_TOUCH_AVATAR_RADIUS
-  const touchesHorizontal = [visualCenter, originCenter].some((center) => {
-    const dx = pos.x - center.x
-    const dz = pos.z - center.z
-    return dx * dx + dz * dz <= horizontalRadius * horizontalRadius
-  })
-  if (!touchesHorizontal) return false
+  const dx = pos.x - visualCenter.x
+  const dz = pos.z - visualCenter.z
+  if (dx * dx + dz * dz > horizontalRadius * horizontalRadius) return false
 
   const playerBottom = pos.y
   const playerTop = pos.y + PLAYER_TOUCH_HEIGHT
-  const berryBottom = Math.min(visualCenter.y, originCenter.y) - half.y
-  const berryTop = Math.max(visualCenter.y, originCenter.y) + half.y
+  const berryBottom = visualCenter.y - half.y
+  const berryTop = visualCenter.y + half.y
 
   return playerTop >= berryBottom - BERRY_TOUCH_VERTICAL_PADDING && playerBottom <= berryTop + BERRY_TOUCH_VERTICAL_PADDING
 }
 
 function getBerryTriggerTransform(spot: BerrySpot) {
   const visualCenter = getBerryVisualCenter(spot)
-  const originCenter = Vector3.create(spot.x, spot.y, spot.z)
   const half = getActiveBerryHalfExtents(spot)
   const radius = Math.max(half.x, half.z) + BERRY_TOUCH_AVATAR_RADIUS + BERRY_TRIGGER_EXTRA_RADIUS
-  const minX = Math.min(visualCenter.x, originCenter.x) - radius
-  const maxX = Math.max(visualCenter.x, originCenter.x) + radius
-  const minY = Math.min(visualCenter.y, originCenter.y) - half.y - BERRY_TOUCH_VERTICAL_PADDING
-  const maxY = Math.max(visualCenter.y, originCenter.y) + half.y + BERRY_TOUCH_VERTICAL_PADDING
-  const minZ = Math.min(visualCenter.z, originCenter.z) - radius
-  const maxZ = Math.max(visualCenter.z, originCenter.z) + radius
 
   return {
-    position: Vector3.create((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2),
-    scale: Vector3.create(maxX - minX, maxY - minY, maxZ - minZ)
+    position: visualCenter,
+    scale: Vector3.create(radius * 2, half.y * 2 + BERRY_TOUCH_VERTICAL_PADDING * 2, radius * 2)
   }
 }
 
 function tryCollectBerry(spot: BerrySpot) {
   if (gameMode === 'solo') {
+    if (soloPhase !== 'playing' || spot.red.collected || !isPlayerTouchingBerry(getPlayerPosition(), spot)) return
     collectSolo(spot)
     return
   }
 
   if (gameMode === 'team' && localTeam) {
+    if (!canCollectTeamBerry(spot, localTeam, getPlayerPosition())) return
     collectTeam(spot, localTeam, Date.now() + hostClockOffset)
   }
 }
@@ -467,6 +815,23 @@ function createBerryTrigger(spot: BerrySpot) {
 
 function updateBerryTrigger(spot: BerrySpot) {
   Transform.createOrReplace(spot.triggerEntity, getBerryTriggerTransform(spot))
+}
+
+function canCollectTeamBerry(spot: BerrySpot, team: Team, pos: { x: number; y: number; z: number }) {
+  if (gameMode !== 'team' || teamPhase !== 'playing') return false
+
+  const slot = team === 'red' ? spot.red : spot.blue
+  if (slot.collected) return false
+
+  const gltf = GltfContainer.getOrNull(slot.entity)
+  if (!gltf) return false
+  if (team === 'red' && gltf.src !== GREEN_BEAR_SRC) return false
+  if (team === 'blue' && gltf.src !== PURPLE_BEAR_SRC) return false
+
+  const visible = VisibilityComponent.getOrNull(slot.entity)?.visible
+  if (!visible) return false
+
+  return isPlayerTouchingBerry(pos, spot)
 }
 
 function setModelCollision(entity: Entity, enabled: boolean, keepPointer = false) {
@@ -486,8 +851,13 @@ function setModelCollision(entity: Entity, enabled: boolean, keepPointer = false
   gltf.invisibleMeshesCollisionMask = invisibleMask | ColliderLayer.CL_PHYSICS
 }
 
+function isStrawberrySource(src: string) {
+  return src === STRAWBERRY_SPOT_SRC || src.endsWith('/STRAWBERRY.glb')
+}
+
 function isBerryEntity(entity: Entity) {
-  if (GltfContainer.getOrNull(entity)?.src === STRAWBERRY_SRC || GltfContainer.getOrNull(entity)?.src === BLUEBERRY_SRC) {
+  const src = GltfContainer.getOrNull(entity)?.src ?? ''
+  if (isStrawberrySource(src) || src === GREEN_BEAR_SRC || src === PURPLE_BEAR_SRC) {
     return true
   }
   for (const s of spots) {
@@ -497,6 +867,23 @@ function isBerryEntity(entity: Entity) {
     if (engine.getEntityOrNullByName(name) === entity) return true
   }
   return false
+}
+
+function isRingIdentifier(src: string, entityName = '') {
+  const identifier = `${src} ${entityName}`.toLowerCase()
+  return identifier.includes(RING_SRC_PART) || identifier.includes('models/ring/') || /^ring.*\.glb/.test(entityName.toLowerCase())
+}
+
+function updateRings(dt: number) {
+  for (const ring of rings) {
+    if (!Transform.has(ring.entity)) continue
+
+    ring.angle = (ring.angle + RING_ROTATION_SPEED_DEGREES * dt) % 360
+    const spin = Quaternion.fromEulerDegrees(0, ring.angle, 0)
+    const transform = Transform.getMutable(ring.entity)
+    transform.position = Vector3.create(ring.basePosition.x, ring.basePosition.y, ring.basePosition.z)
+    transform.rotation = Quaternion.multiply(ring.baseRotation, spin)
+  }
 }
 
 function enableSceneModelColliders() {
@@ -569,6 +956,11 @@ function triggerGumdrop(gumdrop: GumdropSpot) {
 }
 
 function startGumdropFall(gumdrop: GumdropSpot) {
+  Transform.getMutable(gumdrop.entity).position = Vector3.create(
+    gumdrop.startPosition.x,
+    gumdrop.startPosition.y,
+    gumdrop.startPosition.z
+  )
   gumdrop.state = 'falling'
   gumdrop.fallTimer = 0
   gumdrop.respawnTimer = GUMDROP_RESPAWN_DELAY
@@ -580,10 +972,10 @@ function createGumdropTrigger(gumdrop: GumdropSpot) {
   Transform.create(gumdrop.triggerEntity, triggerTransform)
   TriggerArea.setBox(gumdrop.triggerEntity, ColliderLayer.CL_PLAYER)
   triggerAreaEventsSystem.onTriggerEnter(gumdrop.triggerEntity, () => {
-    if (gumdrop.state === 'ready') triggerGumdrop(gumdrop)
+    if (gumdrop.state === 'ready' && isPlayerTouchingGumdrop(getPlayerPosition(), gumdrop)) triggerGumdrop(gumdrop)
   })
   triggerAreaEventsSystem.onTriggerStay(gumdrop.triggerEntity, () => {
-    if (gumdrop.state === 'ready') triggerGumdrop(gumdrop)
+    if (gumdrop.state === 'ready' && isPlayerTouchingGumdrop(getPlayerPosition(), gumdrop)) triggerGumdrop(gumdrop)
   })
 }
 
@@ -609,6 +1001,15 @@ function updateGumdrops(dt: number, pos: { x: number; y: number; z: number }) {
 
     if (gumdrop.state === 'armed') {
       gumdrop.delayTimer = Math.max(0, gumdrop.delayTimer - dt)
+      const elapsed = GUMDROP_FALL_DELAY - gumdrop.delayTimer
+      const strength = Math.min(1, elapsed / GUMDROP_FALL_DELAY) * GUMDROP_SHAKE_AMPLITUDE
+      const shakeX = Math.sin(elapsed * GUMDROP_SHAKE_SPEED) * strength
+      const shakeZ = Math.cos(elapsed * GUMDROP_SHAKE_SPEED * 1.23) * strength
+      Transform.getMutable(gumdrop.entity).position = Vector3.create(
+        gumdrop.startPosition.x + shakeX,
+        gumdrop.startPosition.y,
+        gumdrop.startPosition.z + shakeZ
+      )
       if (gumdrop.delayTimer <= 0) startGumdropFall(gumdrop)
       continue
     }
@@ -670,7 +1071,7 @@ function updateLocalPresence() {
 }
 
 function initializeSyncedGameplay() {
-  if (syncedGameplayReady || !myProfile.networkId || spots.length === 0) return
+  if (syncedGameplayReady || !myProfile.networkId || spots.length < BERRY_SPOT_TARGET_COUNT) return
 
   matchStateEntity = engine.addEntity()
   syncEntity(matchStateEntity, [MatchState.componentId], SyncIds.MatchState)
@@ -1045,6 +1446,7 @@ function goToLobby() {
 
 function joinTeam(team: 1 | 2) {
   myChosenTeam = team
+  localTeam = team === 1 ? 'red' : 'blue'
   lastPresenceChosenTeam = -1
   updateLocalPresence()
 }
@@ -1065,6 +1467,7 @@ function startSoloCountdown() {
   soloPhase = 'countdown'
   soloCountdownTimer = SOLO_PREGAME_DURATION
   soloTimer = 0
+  soloCountdownSoundPlayed = false
   for (const s of spots) {
     s.red.collected = false
     s.red.wasInside = false
@@ -1099,6 +1502,7 @@ function finishSolo() {
     userId: getLocalUserId()
   })
   setUiTimer(soloTimer)
+  playSound(VICTORY_SOUND, 0.95)
   updateSoloState('finished', 0, leaderboard)
 }
 
@@ -1106,7 +1510,7 @@ function collectSolo(s: BerrySpot) {
   if (s.red.collected || soloPhase !== 'playing') return
   s.red.collected = true
   showSlot(s.red, false)
-  AudioSource.createOrReplace(soundEntity, { audioClipUrl: COLLECT_SOUND, playing: true, loop: false, volume: 1 })
+  playSound(COLLECT_SOUND, 1)
   showCollectPopup(null)
   const left = soloRemaining()
   updateSoloState('playing', left, leaderboard)
@@ -1131,6 +1535,7 @@ function finishTeam(version: number) {
 
   const winner: Team | 'draw' =
     teamScores.red > teamScores.blue ? 'red' : teamScores.blue > teamScores.red ? 'blue' : 'draw'
+  playResultSound(winner, localTeam)
   updateTeamState('finished', 0, teamScores, localTeam, winner)
 }
 
@@ -1149,13 +1554,52 @@ function collectTeam(s: BerrySpot, team: Team, hostNow: number) {
   slot.collected = true
   slot.respawnTimer = BERRY_RESPAWN_DELAY
   teamScores = getSyncedScores()
-  AudioSource.createOrReplace(soundEntity, { audioClipUrl: COLLECT_SOUND, playing: true, loop: false, volume: 1 })
+  playSound(COLLECT_SOUND, 1)
   showCollectPopup(team)
   updateTeamState('playing', teamTimer, teamScores, localTeam)
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 let soundEntity: Entity
+let musicEntity: Entity
+const effectSoundEntities: Entity[] = []
+let nextEffectSoundEntity = 0
+let soloCountdownSoundPlayed = false
+let teamCountdownSoundVersion = -1
+
+function playSound(audioClipUrl: string, volume = 1) {
+  if (effectSoundEntities.length === 0) return
+  ensureMusicPlaying()
+
+  const entity = effectSoundEntities[nextEffectSoundEntity]
+  nextEffectSoundEntity = (nextEffectSoundEntity + 1) % effectSoundEntities.length
+  const audio = AudioSource.getMutableOrNull(entity)
+  if (audio) {
+    audio.volume = volume
+    audio.loop = false
+  }
+  AudioSource.playSound(entity, audioClipUrl, true)
+}
+
+function ensureMusicPlaying() {
+  if (!musicEntity) return
+  AudioSource.createOrReplace(musicEntity, {
+    audioClipUrl: MUSIC_SOUND,
+    playing: true,
+    loop: true,
+    volume: 0.28,
+    currentTime: 0
+  })
+}
+
+function playResultSound(winner: Team | 'draw', team: Team | null) {
+  if (winner === 'draw') {
+    playSound(DRAW_SOUND, 0.95)
+    return
+  }
+
+  playSound(team && winner === team ? VICTORY_SOUND : LOST_SOUND, 0.95)
+}
 
 export function main() {
   setupUi()
@@ -1167,6 +1611,16 @@ export function main() {
   setForceStartCallback(forceStart)
 
   soundEntity = engine.addEntity()
+  musicEntity = engine.addEntity()
+  AssetLoad.create(engine.RootEntity, { assets: SOUND_ASSETS })
+  Transform.create(musicEntity, { position: Vector3.create(0, 1, 0), parent: engine.PlayerEntity })
+  for (let i = 0; i < 6; i++) {
+    const entity = i === 0 ? soundEntity : engine.addEntity()
+    Transform.create(entity, { position: Vector3.create(0, 1, 0), parent: engine.PlayerEntity })
+    AudioSource.create(entity, { audioClipUrl: COLLECT_SOUND, playing: false, loop: false, volume: 1, currentTime: 0 })
+    effectSoundEntities.push(entity)
+  }
+  ensureMusicPlaying()
 
   // ── Cinematic camera ──────────────────────────────────────────────────────
   cinematicCam = engine.addEntity()
@@ -1188,33 +1642,62 @@ export function main() {
   let spotsInitialized = false
   let loggedBerryCount = 0
   let loggedGumdropCount = 0
+  let loggedRingCount = 0
+  let loggedStripeCount = 0
+  let loggedJelloCount = 0
 
   function ensureSpotsInitialized() {
     if (spotsInitialized) return
 
-    for (const name of STRAWBERRY_NAMES) {
-      const redEntity = engine.getEntityOrNullByName(name)
-      if (!redEntity) {
-        continue
-      }
+    for (const [redEntity, gltf, transform] of engine.getEntitiesWith(GltfContainer, Transform)) {
+      if (!isStrawberrySource(gltf.src)) continue
 
-      if (!GltfContainer.has(redEntity) || !Transform.has(redEntity)) {
-        continue
-      }
+      if (berrySpotMarkers.has(redEntity)) continue
+      berrySpotMarkers.add(redEntity)
 
-      if (spots.some((spot) => spot.red.entity === redEntity)) continue
+      const mutableGltf = GltfContainer.getMutable(redEntity)
+      mutableGltf.visibleMeshesCollisionMask = 0
+      mutableGltf.invisibleMeshesCollisionMask = 0
+      VisibilityComponent.createOrReplace(redEntity, { visible: false })
 
-      const gltf = GltfContainer.getMutable(redEntity)
-      gltf.visibleMeshesCollisionMask = ColliderLayer.CL_POINTER
-      gltf.invisibleMeshesCollisionMask = 0
+      if (spots.length >= BERRY_SPOT_TARGET_COUNT) continue
 
-      const tf = Transform.getOrNull(redEntity)
-      const bx = tf?.position.x ?? 0
-      const by = tf?.position.y ?? 1
-      const bz = tf?.position.z ?? 0
-      const bScale = tf ? Vector3.create(tf.scale.x, tf.scale.y, tf.scale.z) : Vector3.create(1, 1, 1)
+      const bx = transform.position.x
+      const by = transform.position.y
+      const bz = transform.position.z
+      const bScale = Vector3.create(transform.scale.x, transform.scale.y, transform.scale.z)
+      const bRotation = Quaternion.create(
+        transform.rotation.x,
+        transform.rotation.y,
+        transform.rotation.z,
+        transform.rotation.w
+      )
 
-      Transform.getMutable(redEntity).scale = scaledBerry(bScale, STRAWBERRY_SCALE_MULTIPLIER)
+      const greenEntity = engine.addEntity()
+      Transform.create(greenEntity, {
+        position: Vector3.create(bx, by, bz),
+        rotation: bRotation,
+        scale: scaledBerry(bScale, GREEN_BEAR_SCALE_MULTIPLIER)
+      })
+      GltfContainer.create(greenEntity, {
+        src: GREEN_BEAR_SRC,
+        visibleMeshesCollisionMask: 0,
+        invisibleMeshesCollisionMask: 0
+      })
+      VisibilityComponent.createOrReplace(greenEntity, { visible: false })
+
+      const purpleEntity = engine.addEntity()
+      Transform.create(purpleEntity, {
+        position: Vector3.create(bx, by, bz),
+        rotation: bRotation,
+        scale: scaledBerry(bScale, PURPLE_BEAR_SCALE_MULTIPLIER)
+      })
+      GltfContainer.create(purpleEntity, {
+        src: PURPLE_BEAR_SRC,
+        visibleMeshesCollisionMask: 0,
+        invisibleMeshesCollisionMask: 0
+      })
+      VisibilityComponent.createOrReplace(purpleEntity, { visible: false })
 
       spots.push({
         x: bx,
@@ -1222,8 +1705,8 @@ export function main() {
         z: bz,
         baseScale: bScale,
         triggerEntity: engine.addEntity(),
-        red: { entity: redEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null },
-        blue: { entity: redEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null }
+        red: { entity: greenEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null },
+        blue: { entity: purpleEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null }
       })
       createBerryTrigger(spots[spots.length - 1])
     }
@@ -1233,9 +1716,29 @@ export function main() {
       console.log('[Candy Rush] Initialized', spots.length, 'berry spots')
     }
 
-    if (spots.length >= STRAWBERRY_NAMES.length) {
+    if (spots.length >= BERRY_SPOT_TARGET_COUNT) {
       spotsInitialized = true
       console.log('[Candy Rush] Successfully initialized all', spots.length, 'berry spots!')
+    }
+  }
+
+  function ensureRingsInitialized() {
+    for (const [entity, gltf, transform] of engine.getEntitiesWith(GltfContainer, Transform)) {
+      const entityName = Name.getOrNull(entity)?.value ?? ''
+      if (!isRingIdentifier(gltf.src, entityName)) continue
+      if (rings.some((ring) => ring.entity === entity)) continue
+
+      rings.push({
+        entity,
+        basePosition: Vector3.create(transform.position.x, transform.position.y, transform.position.z),
+        baseRotation: Quaternion.create(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w),
+        angle: 0
+      })
+    }
+
+    if (rings.length > loggedRingCount) {
+      loggedRingCount = rings.length
+      console.log('[Candy Rush] Initialized', rings.length, 'rotating rings')
     }
   }
 
@@ -1271,12 +1774,56 @@ export function main() {
     }
   }
 
+  function ensureCandySurfacesInitialized() {
+    for (const [entity, gltf, transform] of engine.getEntitiesWith(GltfContainer, Transform)) {
+      const entityName = Name.getOrNull(entity)?.value ?? ''
+
+      if (isStripeIdentifier(gltf.src, entityName) && !stickyStripes.some((stripe) => stripe.entity === entity)) {
+        for (const profile of getStripeProfiles(gltf.src, entityName)) {
+          stickyStripes.push({
+            entity,
+            basePosition: Vector3.create(transform.position.x, transform.position.y, transform.position.z),
+            baseRotation: Quaternion.create(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w),
+            baseScale: Vector3.create(transform.scale.x, transform.scale.y, transform.scale.z),
+            profile
+          })
+        }
+      }
+
+      if (isJelloIdentifier(gltf.src, entityName) && !jellos.some((jello) => jello.entity === entity)) {
+        jellos.push({
+          entity,
+          basePosition: Vector3.create(transform.position.x, transform.position.y, transform.position.z),
+          baseRotation: Quaternion.create(transform.rotation.x, transform.rotation.y, transform.rotation.z, transform.rotation.w),
+          baseScale: Vector3.create(transform.scale.x, transform.scale.y, transform.scale.z),
+          profile: getJelloProfile(gltf.src, entityName),
+          bounceTimer: 0,
+          cooldownTimer: 0,
+          wasPlayerOnTop: false
+        })
+      }
+    }
+
+    if (stickyStripes.length > loggedStripeCount) {
+      loggedStripeCount = stickyStripes.length
+      console.log('[Candy Rush] Initialized', stickyStripes.length, 'sticky stripe surfaces')
+    }
+
+    if (jellos.length > loggedJelloCount) {
+      loggedJelloCount = jellos.length
+      console.log('[Candy Rush] Initialized', jellos.length, 'jello bounce pads')
+    }
+  }
+
   // ── Main system ───────────────────────────────────────────────────────────
   engine.addSystem((dt: number) => {
     ensureSpotsInitialized()
+    ensureRingsInitialized()
     ensureGumdropsInitialized()
+    ensureCandySurfacesInitialized()
     enableSceneModelColliders()
-    initializeSyncedGameplay()
+    updateRings(dt)
+    if (spotsInitialized) initializeSyncedGameplay()
 
     const syncedThisFrame = isStateSyncronized()
     if (syncedThisFrame && !wasStateSynchronizedLastFrame) {
@@ -1293,11 +1840,9 @@ export function main() {
 
     const pos = getPlayerPosition()
     updateGumdrops(dt, pos)
+    updateCandySurfaceEffects(dt, pos)
 
-    for (const s of spots) {
-      updateBerryRepresentation(s)
-      updateBerryTrigger(s)
-    }
+    if (gameMode !== 'team') refreshBerrySpots()
 
     tickUi(dt)
 
@@ -1309,7 +1854,14 @@ export function main() {
       if (soloPhase === 'countdown') {
         soloCountdownTimer = Math.max(0, soloCountdownTimer - dt)
         updateSoloState('countdown', soloCountdownTimer, leaderboard)
-        if (soloCountdownTimer <= 0) startSolo()
+        if (!soloCountdownSoundPlayed && soloCountdownTimer <= COUNTDOWN_SOUND_TRIGGER_REMAINING) {
+          playSound(COUNTDOWN_SOUND, 0.9)
+          soloCountdownSoundPlayed = true
+        }
+        if (soloCountdownTimer <= 0) {
+          if (spotsInitialized) startSolo()
+          else soloCountdownTimer = 0.2
+        }
       }
 
       if (soloPhase === 'playing') {
@@ -1318,7 +1870,7 @@ export function main() {
         for (const s of spots) {
           if (s.red.collected) continue
           const touchingBerry = isPlayerTouchingBerry(pos, s)
-          if (touchingBerry && !s.red.wasInside) {
+          if (touchingBerry) {
             s.red.wasInside = true
             collectSolo(s)
           } else if (!touchingBerry) s.red.wasInside = false
@@ -1551,8 +2103,12 @@ export function main() {
         }
 
         if (localTeam) {
+          if (pregameTimer <= COUNTDOWN_SOUND_TRIGGER_REMAINING && teamCountdownSoundVersion !== match.version) {
+            playSound(COUNTDOWN_SOUND, 0.9)
+            teamCountdownSoundVersion = match.version
+          }
           teamPhase = 'countdown'
-          hideAllBerries()
+          refreshBerrySpots()
           updateTeamState('countdown', pregameTimer, teamScores, localTeam)
         } else {
           hideAllBerries()
@@ -1567,15 +2123,15 @@ export function main() {
       if (match.phase === MatchPhaseCode.Playing) {
         teamTimer = Math.max(0, match.duration - (hostNow - match.gameStart) / 1000)
         setUiTimer(teamTimer)
-        syncBerryVisibility(hostNow)
 
         if (localTeam) {
           teamPhase = 'playing'
+          syncBerryVisibility(hostNow)
+          refreshBerrySpots()
 
           for (const s of spots) {
             const slot = localTeam === 'red' ? s.red : s.blue
-            if (slot.collected) continue
-            const touchingBerry = isPlayerTouchingBerry(pos, s)
+            const touchingBerry = canCollectTeamBerry(s, localTeam, pos)
             if (touchingBerry && !slot.wasInside) {
               slot.wasInside = true
               collectTeam(s, localTeam, hostNow)
