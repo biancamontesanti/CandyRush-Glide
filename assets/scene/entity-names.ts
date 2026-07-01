@@ -20,7 +20,6 @@ export enum EntityNames {
   gumdrop_5_glb = "gumdrop-5.glb",
   gumdrop_6_glb = "gumdrop-6.glb",
   gumdrop_7_glb = "gumdrop-7.glb",
-  gumdrop_8_glb = "gumdrop-8.glb",
   gumdrop_9_glb = "gumdrop-9.glb",
   jello_glb = "jello.glb",
   jellpiece_glb = "jellpiece.glb",
@@ -32,5 +31,6 @@ export enum EntityNames {
   ring2_glb = "ring2.glb",
   ring2_glb_2 = "ring2.glb_2",
   ring3_glb = "ring3.glb",
+  snakes_glb = "snakes.glb",
   stripes_glb = "stripes.glb",
 } 

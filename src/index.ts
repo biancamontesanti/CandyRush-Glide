@@ -11,7 +11,9 @@ import {
   InputModifier,
   VirtualCamera,
   MainCamera,
-  Name
+  Name,
+  TriggerArea,
+  triggerAreaEventsSystem
 } from '@dcl/sdk/ecs'
 import { Quaternion, Vector3 } from '@dcl/sdk/math'
 import { getPlayerPosition } from '@dcl-sdk/utils'
@@ -60,8 +62,9 @@ const STRAWBERRY_CENTER_OFFSET = Vector3.create(9.977967, 0.118668, -3.692565)
 const BLUEBERRY_CENTER_OFFSET = Vector3.create(13.098664, -2.31526, -2.112536)
 const BERRY_HALF_EXTENTS = Vector3.create(1.2063, 1.6856, 0.8195)
 const PLAYER_TOUCH_HEIGHT = 1.9
-const BERRY_TOUCH_AVATAR_RADIUS = 0.45
-const BERRY_TOUCH_VERTICAL_PADDING = 0.2
+const BERRY_TOUCH_AVATAR_RADIUS = 2.25
+const BERRY_TOUCH_VERTICAL_PADDING = 4
+const BERRY_TRIGGER_EXTRA_RADIUS = 1.5
 
 // Lobby spawn position — center of parcel, just inside
 const LOBBY_X = 8,
@@ -73,13 +76,18 @@ const STRAWBERRY_NAMES = [
   'STRAWBERRY.glb_2',
   'STRAWBERRY.glb_3',
   'STRAWBERRY.glb_4',
-  'STRAWBERRY.glb_5'
+  'STRAWBERRY.glb_5',
+  'STRAWBERRY.glb_6',
+  'STRAWBERRY.glb_7'
 ]
 const GUMDROP_FALL_DURATION = 0.45
+const GUMDROP_FALL_DELAY = 2
 const GUMDROP_FALL_DISTANCE = 3.2
 const GUMDROP_RESPAWN_DELAY = 3
-const GUMDROP_TOUCH_Y_BELOW = 1.2
-const GUMDROP_TOUCH_Y_ABOVE = 1.8
+const GUMDROP_TOUCH_RADIUS_PADDING = 1.75
+const GUMDROP_TOUCH_Y_BELOW = 2.5
+const GUMDROP_TOUCH_Y_ABOVE = 4
+const GUMDROP_TRIGGER_HEIGHT = GUMDROP_TOUCH_Y_BELOW + GUMDROP_TOUCH_Y_ABOVE
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Team = 'red' | 'blue'
@@ -99,6 +107,7 @@ type BerrySpot = {
   y: number
   z: number
   baseScale: { x: number; y: number; z: number }
+  triggerEntity: Entity
   red: TeamSlot
   blue: TeamSlot
 }
@@ -114,7 +123,9 @@ type GumdropSpot = {
   startPosition: { x: number; y: number; z: number }
   scale: { x: number; y: number; z: number }
   profile: GumdropProfile
-  state: 'ready' | 'falling' | 'hidden'
+  triggerEntity: Entity
+  state: 'ready' | 'armed' | 'falling' | 'hidden'
+  delayTimer: number
   fallTimer: number
   respawnTimer: number
 }
@@ -399,19 +410,63 @@ function getActiveBerryHalfExtents(spot: BerrySpot) {
 }
 
 function isPlayerTouchingBerry(pos: { x: number; y: number; z: number }, spot: BerrySpot) {
-  const center = getBerryVisualCenter(spot)
+  const visualCenter = getBerryVisualCenter(spot)
+  const originCenter = Vector3.create(spot.x, spot.y, spot.z)
   const half = getActiveBerryHalfExtents(spot)
   const horizontalRadius = Math.max(half.x, half.z) + BERRY_TOUCH_AVATAR_RADIUS
-  const dx = pos.x - center.x
-  const dz = pos.z - center.z
-  if (dx * dx + dz * dz > horizontalRadius * horizontalRadius) return false
+  const touchesHorizontal = [visualCenter, originCenter].some((center) => {
+    const dx = pos.x - center.x
+    const dz = pos.z - center.z
+    return dx * dx + dz * dz <= horizontalRadius * horizontalRadius
+  })
+  if (!touchesHorizontal) return false
 
   const playerBottom = pos.y
   const playerTop = pos.y + PLAYER_TOUCH_HEIGHT
-  const berryBottom = center.y - half.y
-  const berryTop = center.y + half.y
+  const berryBottom = Math.min(visualCenter.y, originCenter.y) - half.y
+  const berryTop = Math.max(visualCenter.y, originCenter.y) + half.y
 
   return playerTop >= berryBottom - BERRY_TOUCH_VERTICAL_PADDING && playerBottom <= berryTop + BERRY_TOUCH_VERTICAL_PADDING
+}
+
+function getBerryTriggerTransform(spot: BerrySpot) {
+  const visualCenter = getBerryVisualCenter(spot)
+  const originCenter = Vector3.create(spot.x, spot.y, spot.z)
+  const half = getActiveBerryHalfExtents(spot)
+  const radius = Math.max(half.x, half.z) + BERRY_TOUCH_AVATAR_RADIUS + BERRY_TRIGGER_EXTRA_RADIUS
+  const minX = Math.min(visualCenter.x, originCenter.x) - radius
+  const maxX = Math.max(visualCenter.x, originCenter.x) + radius
+  const minY = Math.min(visualCenter.y, originCenter.y) - half.y - BERRY_TOUCH_VERTICAL_PADDING
+  const maxY = Math.max(visualCenter.y, originCenter.y) + half.y + BERRY_TOUCH_VERTICAL_PADDING
+  const minZ = Math.min(visualCenter.z, originCenter.z) - radius
+  const maxZ = Math.max(visualCenter.z, originCenter.z) + radius
+
+  return {
+    position: Vector3.create((minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2),
+    scale: Vector3.create(maxX - minX, maxY - minY, maxZ - minZ)
+  }
+}
+
+function tryCollectBerry(spot: BerrySpot) {
+  if (gameMode === 'solo') {
+    collectSolo(spot)
+    return
+  }
+
+  if (gameMode === 'team' && localTeam) {
+    collectTeam(spot, localTeam, Date.now() + hostClockOffset)
+  }
+}
+
+function createBerryTrigger(spot: BerrySpot) {
+  Transform.create(spot.triggerEntity, getBerryTriggerTransform(spot))
+  TriggerArea.setBox(spot.triggerEntity, ColliderLayer.CL_PLAYER)
+  triggerAreaEventsSystem.onTriggerEnter(spot.triggerEntity, () => tryCollectBerry(spot))
+  triggerAreaEventsSystem.onTriggerStay(spot.triggerEntity, () => tryCollectBerry(spot))
+}
+
+function updateBerryTrigger(spot: BerrySpot) {
+  Transform.createOrReplace(spot.triggerEntity, getBerryTriggerTransform(spot))
 }
 
 function setModelCollision(entity: Entity, enabled: boolean, keepPointer = false) {
@@ -432,6 +487,9 @@ function setModelCollision(entity: Entity, enabled: boolean, keepPointer = false
 }
 
 function isBerryEntity(entity: Entity) {
+  if (GltfContainer.getOrNull(entity)?.src === STRAWBERRY_SRC || GltfContainer.getOrNull(entity)?.src === BLUEBERRY_SRC) {
+    return true
+  }
   for (const s of spots) {
     if (s.red.entity === entity) return true
   }
@@ -450,9 +508,14 @@ function enableSceneModelColliders() {
 }
 
 function getGumdropProfile(src: string, entityName = ''): GumdropProfile | null {
-  const identifier = `${src} ${entityName}`.toLowerCase()
+  const srcIdentifier = src.toLowerCase()
   for (const entry of GUMDROP_PROFILES) {
-    if (identifier.includes(entry.srcPart)) return entry.profile
+    if (srcIdentifier.includes(entry.srcPart)) return entry.profile
+  }
+
+  const nameIdentifier = entityName.toLowerCase()
+  for (const entry of GUMDROP_PROFILES) {
+    if (nameIdentifier.includes(entry.srcPart)) return entry.profile
   }
   return null
 }
@@ -477,7 +540,7 @@ function getGumdropTopY(gumdrop: GumdropSpot) {
 
 function isPlayerTouchingGumdrop(pos: { x: number; y: number; z: number }, gumdrop: GumdropSpot) {
   const center = getGumdropCenter(gumdrop)
-  const radius = gumdrop.profile.radius * Math.max(gumdrop.scale.x, gumdrop.scale.z)
+  const radius = gumdrop.profile.radius * Math.max(gumdrop.scale.x, gumdrop.scale.z) + GUMDROP_TOUCH_RADIUS_PADDING
   const dx = pos.x - center.x
   const dz = pos.z - center.z
   const topY = getGumdropTopY(gumdrop)
@@ -489,11 +552,39 @@ function isPlayerTouchingGumdrop(pos: { x: number; y: number; z: number }, gumdr
   )
 }
 
+function getGumdropTriggerTransform(gumdrop: GumdropSpot) {
+  const center = getGumdropCenter(gumdrop)
+  const radius = gumdrop.profile.radius * Math.max(gumdrop.scale.x, gumdrop.scale.z) + GUMDROP_TOUCH_RADIUS_PADDING
+  const topY = getGumdropTopY(gumdrop)
+  return {
+    position: Vector3.create(center.x, topY + (GUMDROP_TOUCH_Y_ABOVE - GUMDROP_TOUCH_Y_BELOW) / 2, center.z),
+    scale: Vector3.create(radius * 2, GUMDROP_TRIGGER_HEIGHT, radius * 2)
+  }
+}
+
 function triggerGumdrop(gumdrop: GumdropSpot) {
+  gumdrop.state = 'armed'
+  gumdrop.delayTimer = GUMDROP_FALL_DELAY
+  gumdrop.fallTimer = 0
+}
+
+function startGumdropFall(gumdrop: GumdropSpot) {
   gumdrop.state = 'falling'
   gumdrop.fallTimer = 0
   gumdrop.respawnTimer = GUMDROP_RESPAWN_DELAY
   setModelCollision(gumdrop.entity, false)
+}
+
+function createGumdropTrigger(gumdrop: GumdropSpot) {
+  const triggerTransform = getGumdropTriggerTransform(gumdrop)
+  Transform.create(gumdrop.triggerEntity, triggerTransform)
+  TriggerArea.setBox(gumdrop.triggerEntity, ColliderLayer.CL_PLAYER)
+  triggerAreaEventsSystem.onTriggerEnter(gumdrop.triggerEntity, () => {
+    if (gumdrop.state === 'ready') triggerGumdrop(gumdrop)
+  })
+  triggerAreaEventsSystem.onTriggerStay(gumdrop.triggerEntity, () => {
+    if (gumdrop.state === 'ready') triggerGumdrop(gumdrop)
+  })
 }
 
 function resetGumdrop(gumdrop: GumdropSpot) {
@@ -502,6 +593,7 @@ function resetGumdrop(gumdrop: GumdropSpot) {
   VisibilityComponent.createOrReplace(gumdrop.entity, { visible: true })
   setModelCollision(gumdrop.entity, true)
   gumdrop.state = 'ready'
+  gumdrop.delayTimer = 0
   gumdrop.fallTimer = 0
   gumdrop.respawnTimer = 0
 }
@@ -512,6 +604,12 @@ function updateGumdrops(dt: number, pos: { x: number; y: number; z: number }) {
 
     if (gumdrop.state === 'ready') {
       if (isPlayerTouchingGumdrop(pos, gumdrop)) triggerGumdrop(gumdrop)
+      continue
+    }
+
+    if (gumdrop.state === 'armed') {
+      gumdrop.delayTimer = Math.max(0, gumdrop.delayTimer - dt)
+      if (gumdrop.delayTimer <= 0) startGumdropFall(gumdrop)
       continue
     }
 
@@ -1088,14 +1186,11 @@ export function main() {
 
   // ── Lazy Spots Initializer ──────────────────────────────────────────────────
   let spotsInitialized = false
+  let loggedBerryCount = 0
   let loggedGumdropCount = 0
 
   function ensureSpotsInitialized() {
     if (spotsInitialized) return
-    if (spots.length > 0) {
-      spotsInitialized = true
-      return
-    }
 
     for (const name of STRAWBERRY_NAMES) {
       const redEntity = engine.getEntityOrNullByName(name)
@@ -1106,6 +1201,8 @@ export function main() {
       if (!GltfContainer.has(redEntity) || !Transform.has(redEntity)) {
         continue
       }
+
+      if (spots.some((spot) => spot.red.entity === redEntity)) continue
 
       const gltf = GltfContainer.getMutable(redEntity)
       gltf.visibleMeshesCollisionMask = ColliderLayer.CL_POINTER
@@ -1124,14 +1221,21 @@ export function main() {
         y: by,
         z: bz,
         baseScale: bScale,
+        triggerEntity: engine.addEntity(),
         red: { entity: redEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null },
         blue: { entity: redEntity, collected: false, wasInside: false, respawnTimer: 0, stateEntity: null }
       })
+      createBerryTrigger(spots[spots.length - 1])
     }
 
-    if (spots.length > 0) {
+    if (spots.length > loggedBerryCount) {
+      loggedBerryCount = spots.length
+      console.log('[Candy Rush] Initialized', spots.length, 'berry spots')
+    }
+
+    if (spots.length >= STRAWBERRY_NAMES.length) {
       spotsInitialized = true
-      console.log('[Candy Rush] Successfully lazily initialized', spots.length, 'berry spots!')
+      console.log('[Candy Rush] Successfully initialized all', spots.length, 'berry spots!')
     }
   }
 
@@ -1148,10 +1252,13 @@ export function main() {
         startPosition: Vector3.create(transform.position.x, transform.position.y, transform.position.z),
         scale: Vector3.create(transform.scale.x, transform.scale.y, transform.scale.z),
         profile,
+        triggerEntity: engine.addEntity(),
         state: 'ready',
+        delayTimer: 0,
         fallTimer: 0,
         respawnTimer: 0
       })
+      createGumdropTrigger(gumdrops[gumdrops.length - 1])
 
       VisibilityComponent.createOrReplace(entity, { visible: true })
       setModelCollision(entity, true)
@@ -1189,6 +1296,7 @@ export function main() {
 
     for (const s of spots) {
       updateBerryRepresentation(s)
+      updateBerryTrigger(s)
     }
 
     tickUi(dt)
